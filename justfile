@@ -3,11 +3,14 @@ default:
 
 alias mi := miri
 miri *PARAMS:
-	cargo watch -s "cargo +nightly miri test {{PARAMS}}"
+	cargo +nightly watch -x "miri test {{PARAMS}}"
 
 alias t := test
 test *PARAMS:
-	cargo watch -x "test {{PARAMS}}"
+	cargo test {{PARAMS}}
+
+watch *PARAMS:
+	cargo watch -s "just test {{PARAMS}}"
 
 alias c := clip
 clip *PARAMS:
