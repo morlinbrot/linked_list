@@ -110,14 +110,20 @@ impl<T> CursorMut<'_, T> {
     }
 
     pub fn split_before(&mut self) -> LinkedList<T> {
-        if let Some(cur) = self.cur {
-            unsafe {
-                let idx = self.idx.unwrap();
+        match self.idx {
+            // Edge case 1: Cursor is at the ghost node which sits before head (and after tail), e.g. the whole list is before us:
+            // We hand out the whole list and become an empty list.
+            None => mem::replace(self.list, LinkedList::new()),
+            // Edge case 2: Cursor is at the first node: We don't have to do anything and hand out a new empty list.
+            Some(0) => LinkedList::new(),
+            // Base case: We create a new list from everything before us and hand it out.
+            Some(idx) => unsafe {
+                let cur = self.cur.unwrap();
                 let out_head = self.list.head;
                 let out_tail = (*cur.as_ptr()).prev.take();
 
                 if let Some(node) = out_tail {
-                    (*node.as_ptr()).next = None
+                    (*node.as_ptr()).next = None;
                 }
 
                 let old_len = self.list.len;
@@ -133,42 +139,39 @@ impl<T> CursorMut<'_, T> {
                     len: old_len - new_len,
                     _marker: PhantomData,
                 }
-            }
-        } else {
-            // At ghost node which sits (before head and) after tail, e.g. the whole
-            // list is before us. We hand it out and become an empty list.
-            mem::replace(self.list, LinkedList::new())
+            },
         }
     }
 
     pub fn split_after(&mut self) -> LinkedList<T> {
-        if let Some(cur) = self.cur {
-            unsafe {
-                let idx = self.idx.unwrap();
-                let out_tail = self.list.tail;
-                let out_head = (*cur.as_ptr()).next.take();
+        match self.idx {
+            None => mem::replace(self.list, LinkedList::new()),
+            Some(idx) if idx == self.list.len - 1 => LinkedList::new(),
+            Some(idx) => {
+                unsafe {
+                    let cur = self.cur.unwrap();
+                    let out_tail = self.list.tail;
+                    let out_head = (*cur.as_ptr()).next.take();
 
-                if let Some(node) = out_head {
-                    (*node.as_ptr()).prev = None;
-                }
+                    if let Some(node) = out_head {
+                        (*node.as_ptr()).prev = None;
+                    }
 
-                let old_len = self.list.len;
-                let new_len = idx + 1;
+                    let old_len = self.list.len;
+                    let new_len = idx + 1;
 
-                self.list.tail = Some(cur);
-                self.list.len = new_len;
-                // No index update needed.
+                    self.list.tail = Some(cur);
+                    self.list.len = new_len;
+                    // No index update needed.
 
-                LinkedList {
-                    head: out_head,
-                    tail: out_tail,
-                    len: old_len - new_len,
-                    _marker: PhantomData,
+                    LinkedList {
+                        head: out_head,
+                        tail: out_tail,
+                        len: old_len - new_len,
+                        _marker: PhantomData,
+                    }
                 }
             }
-        } else {
-            // We're at the ghost, return the whole list, become an empty list.
-            mem::replace(self.list, LinkedList::new())
         }
     }
 

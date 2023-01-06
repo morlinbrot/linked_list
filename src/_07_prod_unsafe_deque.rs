@@ -226,6 +226,12 @@ impl<T> Drop for LinkedList<T> {
     }
 }
 
+impl<T> Default for LinkedList<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::iter::*;
@@ -704,11 +710,64 @@ mod test {
         assert_eq!(m.iter().cloned().collect::<Vec<_>>(), &[]);
     }
 
+    #[test]
+    fn split_before_first() {
+        let mut m: LinkedList<u32> = LinkedList::new();
+        m.extend([1, 2, 3, 4, 5, 6]);
+        let mut cursor = m.cursor_mut();
+        cursor.move_next();
+        assert_eq!(cursor.current(), Some(&mut 1));
+
+        let left = cursor.split_before();
+        assert!(left.is_empty());
+        assert!(left.head.is_none() && left.tail.is_none());
+
+        assert_eq!(cursor.current(), Some(&mut 1));
+        assert_eq!(m.iter().cloned().collect::<Vec<_>>(), &[1, 2, 3, 4, 5, 6]);
+        assert_eq!(m.len(), 6);
+    }
+
+    #[test]
+    fn split_after_last() {
+        let mut m: LinkedList<u32> = LinkedList::new();
+        m.extend([1, 2, 3, 4, 5, 6]);
+        assert_eq!(m.iter().cloned().collect::<Vec<_>>(), &[1, 2, 3, 4, 5, 6]);
+        let mut cursor = m.cursor_mut();
+
+        cursor.move_prev();
+        assert_eq!(cursor.current(), Some(&mut 6));
+
+        let right = cursor.split_after();
+        assert!(right.is_empty());
+        assert!(right.head.is_none() && right.tail.is_none());
+
+        assert_eq!(cursor.current(), Some(&mut 6));
+        assert_eq!(m.iter().cloned().collect::<Vec<_>>(), &[1, 2, 3, 4, 5, 6]);
+        assert_eq!(m.len(), 6);
+    }
+
     fn check_links<T: Eq + std::fmt::Debug>(list: &LinkedList<T>) {
         let from_front: Vec<_> = list.iter().collect();
         let from_back: Vec<_> = list.iter().rev().collect();
         let re_reved: Vec<_> = from_back.into_iter().rev().collect();
 
         assert_eq!(from_front, re_reved);
+    }
+
+    #[test]
+    fn exercism_push_back_pop_front() {
+        let mut list: LinkedList<i32> = LinkedList::new();
+        for i in 0..10 {
+            list.push_back(i);
+            assert_eq!(list.len(), i as usize + 1);
+            assert!(!list.is_empty());
+        }
+        for i in 0..10 {
+            assert_eq!(list.len(), 10 - i as usize);
+            assert!(!list.is_empty());
+            assert_eq!(i, list.pop_front().unwrap());
+        }
+        assert_eq!(list.len(), 0);
+        assert!(list.is_empty());
     }
 }
