@@ -176,7 +176,18 @@ impl<T> CursorMut<'_, T> {
     }
 
     pub fn splice_before(&mut self, mut other: LinkedList<T>) {
+        // There are three cases to handle:
+        // Edge case 1: We're at ghost and empty, other list becomes self.
+        // Edge case 2: We're at the ghost node but not empty, append to front.
+        // Base case: `cur` is somewhere in the list, we insert `other` after us.
+
         if other.is_empty() {
+            return;
+        }
+
+        // Edge case 1.
+        if self.cur.is_none() && self.list.head.is_none() {
+            let _ = mem::replace(self.list, other);
             return;
         }
 
@@ -201,13 +212,11 @@ impl<T> CursorMut<'_, T> {
                 (*other_tail.as_ptr()).next = Some(cur);
                 (*cur.as_ptr()).prev = Some(other_tail);
             } else if let Some(tail) = self.list.tail {
+                // Edge case 2.
                 // We're at the ghost node but not empty, append to back.
                 (*tail.as_ptr()).next = Some(other_head);
                 (*other_head.as_ptr()).prev = Some(tail);
                 self.list.tail = Some(other_tail);
-            } else {
-                // We're empty, other list becomes self.
-                let _ = mem::replace(self.list, other);
             }
         }
 
@@ -217,6 +226,12 @@ impl<T> CursorMut<'_, T> {
 
     pub fn splice_after(&mut self, mut other: LinkedList<T>) {
         if other.is_empty() {
+            return;
+        }
+
+        // Edge case 1.
+        if self.cur.is_none() && self.list.head.is_none() {
+            let _ = mem::replace(self.list, other);
             return;
         }
 
@@ -241,13 +256,11 @@ impl<T> CursorMut<'_, T> {
                 (*other_head.as_ptr()).prev = Some(cur);
                 (*cur.as_ptr()).next = Some(other_head);
             } else if let Some(head) = self.list.head {
+                // Edge case 2.
                 // We're at the ghost node but not empty, append to front.
                 (*head.as_ptr()).prev = Some(other_tail);
                 (*other_tail.as_ptr()).next = Some(head);
                 self.list.head = Some(other_head);
-            } else {
-                // We're at ghost and empty, other list becomes self.
-                let _ = mem::replace(self.list, other);
             }
         }
 

@@ -158,6 +158,7 @@ impl<T> LinkedList<T> {
         }
     }
 
+    /// Hand out a mutable cursor positioned at the ghost node.
     pub fn cursor_mut(&mut self) -> CursorMut<'_, T> {
         CursorMut {
             cur: None,
@@ -256,7 +257,6 @@ mod test {
 
         // Try to break a one item list
         list.push_front(10);
-        dbg!(&list);
         assert_eq!(list.len(), 1);
         assert_eq!(list.pop_front(), Some(10));
         assert_eq!(list.len(), 0);
@@ -769,5 +769,89 @@ mod test {
         }
         assert_eq!(list.len(), 0);
         assert!(list.is_empty());
+    }
+
+    #[test]
+    fn splice_before() {
+        let mut list: LinkedList<i32> = LinkedList::new();
+
+        // Edge case 1: Test at ghost node and empty.
+        let mut cursor = list.cursor_mut();
+        assert_eq!(cursor.current(), None);
+
+        let insert = (0..3).collect::<LinkedList<_>>();
+        cursor.splice_before(insert);
+        for mut n in 0..3 {
+            cursor.move_next();
+            assert_eq!(cursor.current(), Some(&mut n));
+        }
+
+        // Edge case 2: At ghost but not empty.
+        let mut list = (0..6).collect::<LinkedList<_>>();
+        let mut cursor = list.cursor_mut();
+        assert_eq!(cursor.current(), None);
+
+        for mut n in 0..3 {
+            cursor.move_next();
+            assert_eq!(cursor.current(), Some(&mut n));
+        }
+
+        // Base case: Somewhere in between.
+        let mut list = (0..6).collect::<LinkedList<_>>();
+        let mut cursor = list.cursor_mut();
+        for _ in 0..4 {
+            cursor.move_next();
+        }
+
+        // let insert = list_from(&[3, 2, 1]);
+        let insert = (0..3).rev().collect::<LinkedList<_>>();
+        cursor.splice_before(insert);
+
+        let mut cursor = list.cursor_mut();
+        for n in (0..3).chain((0..3).rev()).chain(3..6) {
+            cursor.move_next();
+            assert_eq!(*cursor.current().unwrap(), n);
+        }
+    }
+
+    #[test]
+    fn splice_after() {
+        // Edge case 1: Test at ghost node and empty.
+        let mut list: LinkedList<i32> = LinkedList::new();
+        let mut cursor = list.cursor_mut();
+        assert_eq!(cursor.current(), None);
+
+        let insert = (0..3).collect::<LinkedList<_>>();
+        cursor.splice_after(insert);
+        for mut n in 0..3 {
+            cursor.move_next();
+            assert_eq!(cursor.current(), Some(&mut n));
+        }
+
+        // Edge case 2: At ghost but not empty.
+        let mut list = (0..6).collect::<LinkedList<_>>();
+        let mut cursor = list.cursor_mut();
+        assert_eq!(cursor.current(), None);
+
+        for mut n in 0..3 {
+            cursor.move_next();
+            assert_eq!(cursor.current(), Some(&mut n));
+        }
+
+        // Base case: Somewhere in between.
+        let mut list = (0..6).collect::<LinkedList<_>>();
+        let mut cursor = list.cursor_mut();
+        for _ in 0..3 {
+            cursor.move_next();
+        }
+
+        let insert = (0..3).rev().collect::<LinkedList<_>>();
+        cursor.splice_after(insert);
+
+        let mut cursor = list.cursor_mut();
+        for mut n in (0..3).chain((0..3).rev()).chain(3..6) {
+            cursor.move_next();
+            assert_eq!(cursor.current(), Some(&mut n));
+        }
     }
 }
